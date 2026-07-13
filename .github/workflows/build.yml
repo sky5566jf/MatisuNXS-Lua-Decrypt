@@ -18,7 +18,7 @@ jobs:
         sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
         xcodebuild -version
         
-    - name: Build LuaDumper.dylib
+    - name: Build LuaDumper.dylib (simple test version)
       run: |
         cd LuaDumper
         
@@ -26,7 +26,7 @@ jobs:
         SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
         echo "SDK Path: $SDK_PATH"
         
-        # Compile for iOS ARM64
+        # Compile simple test version first
         clang -dynamiclib \
           -arch arm64 \
           -isysroot "$SDK_PATH" \
@@ -34,7 +34,7 @@ jobs:
           -fobjc-arc \
           -O2 \
           -o LuaDumper.dylib \
-          LuaDumper.m \
+          LuaDumper_simple.m \
           -lSystem
         
         echo "Build complete!"
