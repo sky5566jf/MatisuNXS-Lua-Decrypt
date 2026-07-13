@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RootCore API 测试工具</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #00d4ff; margin-bottom: 20px; font-size: 24px; }
+        h2 { color: #00d4ff; margin: 20px 0 10px; font-size: 18px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        
+        .header { background: #16213e; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .header label { display: block; margin-bottom: 5px; color: #aaa; font-size: 14px; }
+        .header input { width: 300px; padding: 10px; border: 1px solid #333; border-radius: 4px; background: #0f3460; color: #fff; font-size: 16px; }
+        .header .status { margin-top: 10px; padding: 8px 12px; border-radius: 4px; font-size: 14px; }
+        .status-ok { background: #0a3d0a; color: #4caf50; }
+        .status-err { background: #3d0a0a; color: #f44336; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 15px; }
+        .card { background: #16213e; border-radius: 8px; padding: 15px; }
+        .card h3 { color: #00d4ff; margin-bottom: 10px; font-size: 16px; }
+        .card .endpoint { font-family: monospace; background: #0f3460; padding: 8px; border-radius: 4px; margin-bottom: 10px; color: #4caf50; font-size: 13px; word-break: break-all; }
+        .card .desc { color: #aaa; font-size: 13px; margin-bottom: 10px; }
+        
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 5px; margin-bottom: 5px; }
+        .btn-primary { background: #00d4ff; color: #000; }
+        .btn-success { background: #4caf50; color: #fff; }
+        .btn-warning { background: #ff9800; color: #000; }
+        .btn-danger { background: #f44336; color: #fff; }
+        .btn:hover { opacity: 0.8; }
+        
+        .result { background: #0f3460; border-radius: 4px; padding: 10px; margin-top: 10px; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; }
+        .result img { max-width: 100%; border-radius: 4px; }
+        
+        .port-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .port-item { background: #0f3460; padding: 6px 12px; border-radius: 4px; font-size: 13px; }
+        .port-item .num { color: #00d4ff; font-weight: bold; }
+        .port-item .open { color: #4caf50; }
+        .port-item .closed { color: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 RootCore API 测试工具</h1>
+        
+        <div class="header">
+            <label>设备 IP 地址</label>
+            <input type="text" id="deviceIP" value="192.69.0.99" placeholder="输入设备IP">
+            <div style="margin-top: 10px;">
+                <button class="btn btn-primary" onclick="testConnection()">测试连接</button>
+                <button class="btn btn-success" onclick="checkPorts()">检查端口</button>
+            </div>
+            <div id="connectionStatus" class="status" style="display:none;"></div>
+        </div>
+        
+        <h2>端口状态</h2>
+        <div id="portList" class="port-list"></div>
+        
+        <h2>API 测试</h2>
+        <div class="grid">
+            <!-- Health Check -->
+            <div class="card">
+                <h3>健康检查</h3>
+                <div class="endpoint">GET /api/health</div>
+                <div class="desc">检查服务是否正常运行</div>
+                <button class="btn btn-primary" onclick="apiGet('/api/health')">发送请求</button>
+                <div id="result-health" class="result" style="display:none;"></div>
+            </div>
+            
+            <!-- Device Info -->
+            <div class="card">
+                <h3>设备信息</h3>
+                <div class="endpoint">GET /api/info</div>
+                <div class="desc">获取设备和应用信息</div>
+                <button class="btn btn-primary" onclick="apiGet('/api/info')">发送请求</button>
+                <div id="result-info" class="result" style="display:none;"></div>
+            </div>
+            
+            <!-- Screenshot -->
+            <div class="card">
+                <h3>截图</h3>
+                <div class="endpoint">GET /api/screenshot</div>
+                <div class="desc">获取设备屏幕截图 (PNG)</div>
+                <button class="btn btn-primary" onclick="apiScreenshot()">获取截图</button>
+                <div id="result-screenshot" class="result" style="display:none;"></div>
+            </div>
+            
+            <!-- Screenshot Raw -->
+            <div class="card">
+                <h3>原始截图</h3>
+                <div class="endpoint">GET /api/screenshot/raw</div>
+                <div class="desc">获取原始帧数据</div>
+                <button class="btn btn-primary" onclick="apiGet('/api/screenshot/raw')">发送请求</button>
+                <div id="result-screenshot-raw" class="result" style="display:none;"></div>
+            </div>
+            
+            <!-- Command -->
+            <div class="card">
+                <h3>执行命令</h3>
+                <div class="endpoint">POST /api/command</div>
+                <div class="desc">发送命令到 RootCore</div>
+                <select id="commandSelect" style="padding: 8px; border-radius: 4px; background: #0f3460; color: #fff; border: 1px solid #333; margin-bottom: 10px; width: 100%;">
+                    <option value="checkrun">checkrun - 检查运行状态</option>
+                    <option value="startscript">startscript - 启动脚本</option>
+                    <option value="stopscript">stopscript - 停止脚本</option>
+                    <option value="screencap">screencap - 截图</option>
+                    <option value="getscriptversion">getscriptversion - 脚本版本</option>
+                    <option value="getdeviceid">getdeviceid - 设备ID</option>
+                    <option value="getscreeninfo">getscreeninfo - 屏幕信息</option>
+                    <option value="frontappname">frontappname - 前台应用</option>
+                    <option value="restartservice">restartservice - 重启服务</option>
+                </select>
+                <button class="btn btn-warning" onclick="apiCommand()">执行</button>
+                <div id="result-command" class="result" style="display:none;"></div>
+            </div>
+            
+            <!-- Custom Command -->
+            <div class="card">
+                <h3>自定义命令</h3>
+                <div class="endpoint">POST /api/command</div>
+                <div class="desc">输入自定义命令</div>
+                <input type="text" id="customCmd" placeholder="输入命令..." style="width:100%; padding:8px; border-radius:4px; background:#0f3460; color:#fff; border:1px solid #333; margin-bottom:10px;">
+                <button class="btn btn-warning" onclick="apiCustomCommand()">执行</button>
+                <div id="result-custom" class="result" style="display:none;"></div>
+            </div>
+            
+            <!-- Download List -->
+            <div class="card">
+                <h3>文件列表</h3>
+                <div class="endpoint">GET /api/download/list</div>
+                <div class="desc">列出可下载的文件</div>
+                <button class="btn btn-primary" onclick="apiGet('/api/download/list')">获取列表</button>
+                <div id="result-download-list" class="result" style="display:none;"></div>
+            </div>
+            
+            <!-- Install Script -->
+            <div class="card">
+                <h3>安装脚本</h3>
+                <div class="endpoint">POST /api/installsc</div>
+                <div class="desc">上传 .lrj 脚本文件到设备</div>
+                <input type="file" id="lrjFile" accept=".lrj,.zip" style="margin-bottom:10px;">
+                <button class="btn btn-danger" onclick="apiInstallScript()">上传安装</button>
+                <div id="result-install" class="result" style="display:none;"></div>
+            </div>
+            
+            <!-- Upload File -->
+            <div class="card">
+                <h3>上传文件</h3>
+                <div class="endpoint">POST /api/upload?path=...</div>
+                <div class="desc">上传任意文件到设备</div>
+                <input type="file" id="uploadFile" style="margin-bottom:10px;">
+                <input type="text" id="uploadPath" placeholder="目标路径 (如 /var/mobile/Media/test.txt)" style="width:100%; padding:8px; border-radius:4px; background:#0f3460; color:#fff; border:1px solid #333; margin-bottom:10px;">
+                <button class="btn btn-success" onclick="apiUpload()">上传</button>
+                <div id="result-upload" class="result" style="display:none;"></div>
+            </div>
+            
+            <!-- Live Port -->
+            <div class="card">
+                <h3>实时端口</h3>
+                <div class="endpoint">GET /api/liveport</div>
+                <div class="desc">获取实时通信端口</div>
+                <button class="btn btn-primary" onclick="apiGet('/api/liveport')">获取端口</button>
+                <div id="result-liveport" class="result" style="display:none;"></div>
+            </div>
+        </div>
+        
+        <h2>自定义请求</h2>
+        <div class="card">
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <select id="customMethod" style="padding:8px; border-radius:4px; background:#0f3460; color:#fff; border:1px solid #333;">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                </select>
+                <input type="text" id="customUrl" placeholder="API 路径 (如 /api/health)" style="flex:1; padding:8px; border-radius:4px; background:#0f3460; color:#fff; border:1px solid #333;">
+                <button class="btn btn-primary" onclick="apiCustom()">发送</button>
+            </div>
+            <textarea id="customBody" placeholder="请求体 (JSON, 仅 POST)" style="width:100%; height:80px; padding:8px; border-radius:4px; background:#0f3460; color:#fff; border:1px solid #333; font-family:monospace; resize:vertical;"></textarea>
+            <div id="result-custom2" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const ports = [
+            { port: 5588, name: 'listenport', desc: 'HTTP API' },
+            { port: 12586, name: 'rpcport', desc: 'RPC' },
+            { port: 3333, name: 'taskport', desc: 'Task' },
+            { port: 3339, name: 'streamport', desc: 'Stream' },
+            { port: 12181, name: 'kbport', desc: 'Keyboard' },
+            { port: 24266, name: 'nxseport', desc: 'NX Service' },
+            { port: 25886, name: 'wdaport', desc: 'WebDAV' }
+        ];
+        
+        function getBase() {
+            return 'http://' + document.getElementById('deviceIP').value + ':5588';
+        }
+        
+        function showResult(id, content, isError) {
+            const el = document.getElementById(id);
+            el.style.display = 'block';
+            el.innerHTML = content;
+            el.style.borderLeft = isError ? '3px solid #f44336' : '3px solid #4caf50';
+        }
+        
+        async function apiGet(path) {
+            const id = 'result-' + path.split('/').pop();
+            try {
+                const resp = await fetch(getBase() + path, { mode: 'no-cors' });
+                showResult(id, 'Response: ' + resp.status + ' ' + resp.statusText + '\n(Note: no-cors mode, full response may not be readable)', false);
+            } catch(e) {
+                showResult(id, 'Error: ' + e.message + '\n\n可能原因:\n1. 设备IP不正确\n2. 服务未启动\n3. 跨域限制 (使用代理)', true);
+            }
+        }
+        
+        async function apiScreenshot() {
+            try {
+                const resp = await fetch(getBase() + '/api/screenshot');
+                if (resp.ok) {
+                    const blob = await resp.blob();
+                    const url = URL.createObjectURL(blob);
+                    showResult('result-screenshot', '<img src="' + url + '" />', false);
+                } else {
+                    showResult('result-screenshot', 'Error: ' + resp.status, true);
+                }
+            } catch(e) {
+                showResult('result-screenshot', 'Error: ' + e.message + '\n\n注意: 浏览器跨域限制可能阻止截图显示\n建议使用代理或在设备本地访问', true);
+            }
+        }
+        
+        async function apiCommand() {
+            const cmd = document.getElementById('commandSelect').value;
+            try {
+                const resp = await fetch(getBase() + '/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd }),
+                    mode: 'no-cors'
+                });
+                showResult('result-command', 'Command: ' + cmd + '\nResponse: ' + resp.status + '\n(Note: no-cors mode)', false);
+            } catch(e) {
+                showResult('result-command', 'Error: ' + e.message, true);
+            }
+        }
+        
+        async function apiCustomCommand() {
+            const cmd = document.getElementById('customCmd').value;
+            if (!cmd) { alert('请输入命令'); return; }
+            try {
+                const resp = await fetch(getBase() + '/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd }),
+                    mode: 'no-cors'
+                });
+                showResult('result-custom', 'Command: ' + cmd + '\nResponse: ' + resp.status, false);
+            } catch(e) {
+                showResult('result-custom', 'Error: ' + e.message, true);
+            }
+        }
+        
+        async function apiInstallScript() {
+            const file = document.getElementById('lrjFile').files[0];
+            if (!file) { alert('请选择 .lrj 文件'); return; }
+            try {
+                const resp = await fetch(getBase() + '/api/installsc', {
+                    method: 'POST',
+                    body: file,
+                    mode: 'no-cors'
+                });
+                showResult('result-install', 'File: ' + file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)\nResponse: ' + resp.status, false);
+            } catch(e) {
+                showResult('result-install', 'Error: ' + e.message, true);
+            }
+        }
+        
+        async function apiUpload() {
+            const file = document.getElementById('uploadFile').files[0];
+            const path = document.getElementById('uploadPath').value;
+            if (!file || !path) { alert('请选择文件并输入目标路径'); return; }
+            try {
+                const resp = await fetch(getBase() + '/api/upload?path=' + encodeURIComponent(path), {
+                    method: 'POST',
+                    body: file,
+                    mode: 'no-cors'
+                });
+                showResult('result-upload', 'File: ' + file.name + '\nPath: ' + path + '\nResponse: ' + resp.status, false);
+            } catch(e) {
+                showResult('result-upload', 'Error: ' + e.message, true);
+            }
+        }
+        
+        async function apiCustom() {
+            const method = document.getElementById('customMethod').value;
+            const url = document.getElementById('customUrl').value;
+            const body = document.getElementById('customBody').value;
+            if (!url) { alert('请输入API路径'); return; }
+            
+            try {
+                const opts = { method, mode: 'no-cors' };
+                if (method === 'POST' && body) {
+                    opts.headers = { 'Content-Type': 'application/json' };
+                    opts.body = body;
+                }
+                const resp = await fetch(getBase() + url, opts);
+                showResult('result-custom2', method + ' ' + url + '\nResponse: ' + resp.status + '\n(Note: no-cors mode)', false);
+            } catch(e) {
+                showResult('result-custom2', 'Error: ' + e.message, true);
+            }
+        }
+        
+        async function testConnection() {
+            const el = document.getElementById('connectionStatus');
+            el.style.display = 'block';
+            el.className = 'status';
+            el.textContent = '测试中...';
+            
+            try {
+                const resp = await fetch(getBase() + '/api/health', { mode: 'no-cors' });
+                el.className = 'status status-ok';
+                el.textContent = '连接成功! (HTTP ' + resp.status + ')';
+            } catch(e) {
+                el.className = 'status status-err';
+                el.textContent = '连接失败: ' + e.message + ' (可能需要代理或CORS配置)';
+            }
+        }
+        
+        async function checkPorts() {
+            const container = document.getElementById('portList');
+            container.innerHTML = '检查中...';
+            
+            // 注意: 浏览器无法直接检查TCP端口
+            // 这里只是显示配置的端口
+            container.innerHTML = ports.map(p => 
+                '<div class="port-item"><span class="num">' + p.port + '</span> ' + p.name + ' (' + p.desc + ')</div>'
+            ).join('');
+            
+            container.innerHTML += '<div style="width:100%; margin-top:10px; padding:10px; background:#0f3460; border-radius:4px; font-size:13px; color:#ff9800;">⚠️ 注意: 浏览器无法直接检测TCP端口。请在设备上通过SSH检查:<br><code>lsof -i -P | grep LISTEN</code></div>';
+        }
+        
+        // 初始化端口列表
+        checkPorts();
+    </script>
+</body>
+</html>
