@@ -47,7 +47,7 @@
         
         <div class="header">
             <label>设备 IP 地址</label>
-            <input type="text" id="deviceIP" value="192.69.0.99" placeholder="输入设备IP">
+            <input type="text" id="deviceIP" value="192.69.0.99:8881" placeholder="输入设备IP:端口">
             <div style="margin-top: 10px;">
                 <button class="btn btn-primary" onclick="testConnection()">测试连接</button>
                 <button class="btn btn-success" onclick="checkPorts()">检查端口</button>
@@ -193,7 +193,9 @@
         ];
         
         function getBase() {
-            return 'http://' + document.getElementById('deviceIP').value + ':5588';
+            const val = document.getElementById('deviceIP').value;
+            if (val.includes(':')) return 'http://' + val;
+            return 'http://' + val + ':8881';
         }
         
         function showResult(id, content, isError) {
