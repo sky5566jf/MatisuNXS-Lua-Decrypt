@@ -1,0 +1,20 @@
+name: Build LuaDumper Simple
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      run: |
+        cd LuaDumper
+        SDK=\
+        clang -dynamiclib -arch arm64 -isysroot "\" -miphoneos-version-min=13.0 -fobjc-arc -O2 -o LuaDumper.dylib LuaDumper_simple.m -lSystem
+        ls -la LuaDumper.dylib
+    - uses: actions/upload-artifact@v4
+      with:
+        name: LuaDumper-simple
+        path: LuaDumper/LuaDumper.dylib
