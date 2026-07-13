@@ -1,0 +1,49 @@
+name: Build LuaDumper.dylib
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup Xcode
+      run: |
+        sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+        xcodebuild -version
+        
+    - name: Build LuaDumper.dylib
+      run: |
+        cd LuaDumper
+        
+        # Get iOS SDK path
+        SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+        echo "SDK Path: $SDK_PATH"
+        
+        # Compile for iOS ARM64
+        clang -dynamiclib \
+          -arch arm64 \
+          -isysroot "$SDK_PATH" \
+          -miphoneos-version-min=13.0 \
+          -fobjc-arc \
+          -O2 \
+          -o LuaDumper.dylib \
+          LuaDumper.m \
+          -lSystem
+        
+        echo "Build complete!"
+        ls -la LuaDumper.dylib
+        file LuaDumper.dylib
+        
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: LuaDumper-dylib
+        path: LuaDumper/LuaDumper.dylib
+        retention-days: 30
